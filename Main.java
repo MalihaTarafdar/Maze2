@@ -33,6 +33,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private FontMetrics mm;
 	private FontMetrics om;
 
+	private final int renderDistance = 5;
+
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, SETTINGS, MAZE2D, MAZE3D, GAME_OVER;
 	}
@@ -121,48 +123,52 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	}
 
 	public void paintMaze3D(Graphics2D g2) {
-		Color[] mazeColors = {new Color(128, 128, 128), new Color(102, 102, 102), new Color(77, 77, 77), new Color(51, 51, 51), new Color(25, 25, 25)};
-		ArrayList<Polygon> walls = getWalls();
+		ArrayList<Wall3D> walls = getWalls();
 		for (int i = 0; i < walls.size(); i++) {
-			g2.setColor(mazeColors[i]);
-			g2.fill(walls.get(i));
-
+			g2.setColor(walls.get(i).getColor());
+			g2.fill(walls.get(i).getPolygon());
 		}
 	}
 
-	public ArrayList<Polygon> getWalls() {
+	public ArrayList<Wall3D> getWalls() {
 		int currentRow = explorer.getLoc().getRow(), currentCol = explorer.getLoc().getCol();
-		int width = 50, height = 800;
-		ArrayList<Polygon> walls = new ArrayList<Polygon>();
+		ArrayList<Wall3D> walls = new ArrayList<Wall3D>();
+		ArrayList<Wall3D> temp = new ArrayList<Wall3D>();
 
-		for (int d = 0; d < 5; d++) {				
-			//5 is completely arbitrary...It's how far I can see in 3D. //5 steps in front?
-			int[] dpoints = {50 + 50 * d, 100 + 50 * d, 100 + 50 * d, 50 + 50 * d};
+		for (int d = 0; d < renderDistance; d++) {
+			int[] xpoints = {50 + 50 * d, 100 + 50 * d, 100 + 50 * d, 50 + 50 * d};
 			int[] ypoints = {50 + 50 * d, 100 + 50 * d, 700 - 50 * d, 750 - 50 * d};
+			Color color = new Color(128 - 25 * d, 128 - 25 * d, 128 - 25 * d);
+
 			switch(explorer.getDir()) {
 				case EAST:
-					//draw out the walls on a piece of paper and see how the numbers change
-					//if I am facing east, then the left wall would fall one row above me
-					//And then I look out one column forward via the loop
-					//if there is no wall there, then add a trapezoid to the walls list
-					if(maze[currentRow - 1][currentCol + d] != null) {
-						walls.add(new Polygon(dpoints, ypoints, 4));
+					if (maze[currentRow - 1][currentCol + d] != null) {
+						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
+					}
+					if (maze[currentRow + 1][currentCol + d] != null) {
+						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
 					}
 					break;
 				case NORTH:
-			
 					break;
 				case WEST:
-			
 					break;
 				case SOUTH:
-				
 					break;
 			}
 			if (d < 4) {
-				walls.add(convertRect(new Rectangle(dpoints[d], ypoints[d], width, height)));
+				int width = 50;
+				int height = ypoints[xpoints.length - 1 - d] - ypoints[d];
+				Polygon p = convertRect(new Rectangle(xpoints[d] - width, ypoints[d], width, height));
+				temp.add(new Wall3D(p, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
+				temp.add(new Wall3D(reflectPolygon(p, false), new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
 			}
 		}
+
+		for (Wall3D w : temp) {
+			walls.add(0, w);
+		}
+
 		return walls;
 	}
 
@@ -170,6 +176,32 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		int[] xpoints = {(int)r.getX(), (int)(r.getX() + r.getWidth()), (int)(r.getX() + r.getWidth()), (int)(r.getX())};
 		int[] ypoints = {(int)r.getY(), (int)(r.getY()), (int)(r.getY() + r.getHeight()), (int)(r.getY() + r.getHeight())};
 		return new Polygon(xpoints, ypoints, 4);
+	}
+	public Polygon reflectPolygon(Polygon p, boolean horizontal) {
+		Polygon reflectedP = new Polygon();
+		for (int i = 0; i < p.npoints; i++) {
+			if (horizontal) {
+				reflectedP.addPoint(p.xpoints[i], frame.getHeight() - p.ypoints[i]);
+			} else {
+				reflectedP.addPoint(frame.getWidth() - p.xpoints[i], p.ypoints[i]);
+			}
+		}
+		return reflectedP;
+	}
+
+	public static class Wall3D {
+		private final Polygon polygon;
+		private final Color color;
+		public Wall3D(Polygon polygon, Color color) {
+			this.polygon = polygon;
+			this.color = color;
+		}
+		public Polygon getPolygon() {
+			return polygon;
+		}
+		public Color getColor() {
+			return color;
+		}
 	}
 
 	public void paintMaze2D(Graphics2D g2) {
