@@ -15,12 +15,37 @@ public class Explorer {
 		health = 100;
 	}
 
-	public void move(int dir, Structure[] maze) {
-		
+	public boolean isCollision(int moveRow, int moveCol, Structure[][] maze) {
+		return maze[moveRow][moveCol] != null;
+	}
+
+	public void move(int dir, Structure[][] maze) {
+		int moveRow = loc.getRow(), moveCol = loc.getCol();
+		switch (dir) {
+			case 0: moveCol++;
+			break;
+			case 1: moveRow--;
+			break;
+			case 2: moveCol--;
+			break;
+			case 3: moveRow++;
+			break;
+		}
+		if (!isCollision(moveRow, moveCol, maze)) {
+			setLoc(moveRow, moveCol);
+		}
 	}
 
 	public void turn(Direction turnDir) {
-		
+		if (turnDir == Direction.LEFT) {
+			dir++;
+			if (dir > 3)
+				dir = 0;
+		} else {
+			dir--;
+			if (dir < 0)
+				dir = 3;
+		}
 	}
 
 	public void setLoc(int row, int col) {

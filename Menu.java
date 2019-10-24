@@ -3,17 +3,21 @@ public class Menu {
 	private Option[] options;
 	private int selectedIndex;
 
-	public Menu(Option[] options) {
-		this.options = options;
+	public Menu(String... optionNames) {
+		options = new Option[optionNames.length];
+		for (int i = 0; i < options.length; i++) {
+			options[i] = new Option(optionNames[i]);
+		}
 		selectedIndex = 0;
+		options[selectedIndex].setSelected(true);
 	}
 
 	public static class Option {
 		private String name;
 		private boolean selected;
-		public Option(String name, boolean selected) {
+		public Option(String name) {
 			this.name = name;
-			this.selected = selected;
+			selected = false;
 		}
 		public void setName(String name) {
 			this.name = name;
