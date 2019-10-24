@@ -1,9 +1,12 @@
+import java.awt.Color;
+
 public class Explorer {
 
 	private Location loc;
 	private final int size;
 	private int dir; //0 EAST, 1 NORTH, 2 WEST, 3 SOUTH
 	private int health;
+	private Color color;
 
 	public enum Direction {
 		LEFT, RIGHT;
@@ -13,6 +16,7 @@ public class Explorer {
 		loc = new Location(row, col);
 		this.size = size;
 		health = 100;
+		color = Color.BLUE;
 	}
 
 	public boolean isCollision(int moveRow, int moveCol, Structure[][] maze) {
@@ -78,5 +82,12 @@ public class Explorer {
 	}
 	public int getHealth() {
 		return health;
+	}
+
+	public void setColor(Color color) {
+		this.color = color;
+	}
+	public Color getColor() {
+		return color;
 	}
 }

@@ -4,8 +4,6 @@ import java.awt.event.KeyListener;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 
 public class Main extends JPanel implements KeyListener, Runnable {
 	private static final long serialVersionUID = 1L;
@@ -71,13 +69,19 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						win = true;
 						gameState = GameState.GAME_OVER;
 					}
-				break;
+					break;
 				case GAME_OVER:
 					delay(1000);
 					gameState = GameState.MAIN_MENU;
 					reset();
 					repaint();
-				break;
+					break;
+				case MAIN_MENU:
+					break;
+				case LEVEL_SELECT:
+					break;
+				case SETTINGS:
+					break;
 			}
 			repaint();
 		}
@@ -159,13 +163,13 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		for (Structure[] row : maze) {
 			for (Structure s : row) {
 				if (s != null) {
-					g2.setColor(Color.GRAY);
+					g2.setColor(s.getColor());
 					g2.fillRect(s.getLoc().getCol() * s.getSize(), s.getLoc().getRow() * s.getSize(), s.getSize(), s.getSize());
 				}
 			}
 		}
-		g2.setColor(Color.WHITE);
-		g2.fillRect(explorer.getLoc().getCol() * explorer.getSize(), explorer.getLoc().getRow() * explorer.getSize(), explorer.getSize(), explorer.getSize());
+		g2.setColor(explorer.getColor());
+		g2.fillOval(explorer.getLoc().getCol() * explorer.getSize(), explorer.getLoc().getRow() * explorer.getSize(), explorer.getSize(), explorer.getSize());
 		g2.drawString(explorer.getDir() + "", 700, 100);
 	}
 
@@ -292,6 +296,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						gameState = GameState.MAIN_MENU;
 					}
+					break;
+				case GAME_OVER:
 					break;
 			}
 		}
