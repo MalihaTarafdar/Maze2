@@ -8,7 +8,11 @@ public class Explorer {
 	private int health;
 	private Color color;
 
-	public enum Direction {
+	public enum CardinalDirection {
+		EAST, NORTH, WEST, SOUTH;
+	}
+
+	public enum RelativeDirection {
 		LEFT, RIGHT;
 	}
 
@@ -23,7 +27,7 @@ public class Explorer {
 		return maze[moveRow][moveCol] != null;
 	}
 
-	public void move(int dir, Structure[][] maze) {
+	public void move(Structure[][] maze) {
 		int moveRow = loc.getRow(), moveCol = loc.getCol();
 		switch (dir) {
 			case 0: moveCol++;
@@ -40,8 +44,8 @@ public class Explorer {
 		}
 	}
 
-	public void turn(Direction turnDir) {
-		if (turnDir == Direction.LEFT) {
+	public void turn(RelativeDirection turnDir) {
+		if (turnDir == RelativeDirection.LEFT) {
 			dir++;
 			if (dir > 3)
 				dir = 0;
@@ -64,8 +68,13 @@ public class Explorer {
 		return size;
 	}
 
-	public int getDir() {
-		return dir;
+	public CardinalDirection getDir() {
+		switch (dir) {
+			case 0: return CardinalDirection.EAST;
+			case 1: return CardinalDirection.NORTH;
+			case 2: return CardinalDirection.WEST;
+		}
+		return CardinalDirection.SOUTH;
 	}
 
 	public void heal(int healAmount) {
