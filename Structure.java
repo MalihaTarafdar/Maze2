@@ -11,7 +11,7 @@ public class Structure {
 		this.size = size;
 		color = Color.GRAY;
 	}
-
+	
 	public void setLoc(int row, int col) {
 		loc.setRow(row);
 		loc.setCol(col);
@@ -19,7 +19,7 @@ public class Structure {
 	public Location getLoc() {
 		return loc;
 	}
-
+	
 	public int getSize() {
 		return size;
 	}

@@ -23,10 +23,6 @@ public class Explorer {
 		color = Color.BLUE;
 	}
 
-	public boolean isCollision(int moveRow, int moveCol, Structure[][] maze) {
-		return maze[moveRow][moveCol] != null;
-	}
-
 	public void move(Structure[][] maze) {
 		int moveRow = loc.getRow(), moveCol = loc.getCol();
 		switch (dir) {
@@ -39,7 +35,7 @@ public class Explorer {
 			case 3: moveRow++;
 			break;
 		}
-		if (!isCollision(moveRow, moveCol, maze)) {
+		if (maze[moveRow][moveCol] == null) { //check for collision
 			setLoc(moveRow, moveCol);
 		}
 	}

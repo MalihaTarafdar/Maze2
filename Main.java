@@ -33,7 +33,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private FontMetrics mm;
 	private FontMetrics om;
 
-	private final int renderDistance = 5;
+	private final int renderDistance = 4;
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, SETTINGS, MAZE2D, MAZE3D, GAME_OVER;
@@ -127,49 +127,93 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		for (int i = 0; i < walls.size(); i++) {
 			g2.setColor(walls.get(i).getColor());
 			g2.fill(walls.get(i).getPolygon());
+			g2.setColor(Color.BLACK);
+			g2.draw(walls.get(i).getPolygon());
 		}
 	}
 
 	public ArrayList<Wall3D> getWalls() {
 		int currentRow = explorer.getLoc().getRow(), currentCol = explorer.getLoc().getCol();
 		ArrayList<Wall3D> walls = new ArrayList<Wall3D>();
-		ArrayList<Wall3D> temp = new ArrayList<Wall3D>();
+		Wall3D frontWall = null;
 
 		for (int d = 0; d < renderDistance; d++) {
-			int[] xpoints = {50 + 50 * d, 100 + 50 * d, 100 + 50 * d, 50 + 50 * d};
-			int[] ypoints = {50 + 50 * d, 100 + 50 * d, 700 - 50 * d, 750 - 50 * d};
+			final int width = 80;
+			final int height = 80;
+			int[] xpoints = {width * d, height + width * d, height + width * d, width * d};
+			int[] ypoints = {width * d, height + width * d, frame.getHeight() - height - width * d, frame.getHeight() - width * d};
 			Color color = new Color(128 - 25 * d, 128 - 25 * d, 128 - 25 * d);
+			Color darkerColor = new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25);
+			boolean hasFrontWall = false;
 
 			switch(explorer.getDir()) {
 				case EAST:
-					if (maze[currentRow - 1][currentCol + d] != null) {
+					if (isOutOfBounds(currentRow - 1, currentCol + d) || maze[currentRow - 1][currentCol + d] instanceof Wall) //left walls
 						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
-					}
-					if (maze[currentRow + 1][currentCol + d] != null) {
+					if (isOutOfBounds(currentRow + 1, currentCol + d) || maze[currentRow + 1][currentCol + d] instanceof Wall) //right walls
 						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
-					}
+					if (currentCol + d >= maze[0].length || maze[currentRow][currentCol + d] instanceof Wall)
+						hasFrontWall = true;
 					break;
 				case NORTH:
+					if (isOutOfBounds(currentRow - d, currentCol - 1) || maze[currentRow - d][currentCol - 1] instanceof Wall) //left walls
+						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
+					if (isOutOfBounds(currentRow - d, currentCol + 1) || maze[currentRow - d][currentCol + 1] instanceof Wall) //right walls
+						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
+					if (currentRow - d < 0 || maze[currentRow - d][currentCol] instanceof Wall)
+						hasFrontWall = true;
 					break;
 				case WEST:
+					if (isOutOfBounds(currentRow + 1, currentCol - d) || maze[currentRow + 1][currentCol - d] instanceof Wall) //left walls
+						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
+					if (isOutOfBounds(currentRow - 1, currentCol - d) || maze[currentRow - 1][currentCol - d] instanceof Wall) //right walls
+						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
+					if (currentCol - d < 0 || maze[currentRow][currentCol - d] instanceof Wall)
+						hasFrontWall = true;
 					break;
 				case SOUTH:
+					if (isOutOfBounds(currentRow + d, currentCol + 1) || maze[currentRow + d][currentCol + 1] instanceof Wall) //left walls
+						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
+					if (isOutOfBounds(currentRow + d, currentCol - 1) || maze[currentRow + d][currentCol - 1] instanceof Wall) //right walls
+						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
+					if (currentRow + d >= maze.length || maze[currentRow + d][currentCol] instanceof Wall)
+						hasFrontWall = true;
 					break;
 			}
-			if (d < 4) {
-				int width = 50;
-				int height = ypoints[xpoints.length - 1 - d] - ypoints[d];
-				Polygon p = convertRect(new Rectangle(xpoints[d] - width, ypoints[d], width, height));
-				temp.add(new Wall3D(p, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
-				temp.add(new Wall3D(reflectPolygon(p, false), new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
+			
+			//rectangles to give effect of hallways
+			Polygon hall = convertRect(new Rectangle(xpoints[0] - width, ypoints[0], width, ypoints[ypoints.length - 1] - ypoints[0]));
+			walls.add(0, new Wall3D(hall, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
+			walls.add(0, new Wall3D(reflectPolygon(hall, false), darkerColor));
+			
+			//ceiling
+			Polygon ceiling = new Polygon();
+			ceiling.addPoint(0, ypoints[3]);
+			ceiling.addPoint(0, ypoints[2]);
+			ceiling.addPoint(frame.getWidth(), ypoints[2]);
+			ceiling.addPoint(frame.getWidth(), ypoints[3]);
+			walls.add(0, new Wall3D(ceiling, darkerColor));
+
+			//floor
+			walls.add(0, new Wall3D(reflectPolygon(ceiling, true), darkerColor));
+
+			//front wall
+			if (hasFrontWall && frontWall == null) {
+				frontWall = new Wall3D(convertRect(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor);
+				walls.add(2, new Wall3D(convertRect(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor));
+				walls.add(2, new Wall3D(convertRect(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor));
 			}
 		}
 
-		for (Wall3D w : temp) {
-			walls.add(0, w);
-		}
+		//front wall should always be on top
+		if (frontWall != null)
+			walls.add(frontWall);
 
 		return walls;
+	}
+
+	public boolean isOutOfBounds(int row, int col) {
+		return row < 0 || col < 0 || row >= maze.length || col >= maze[0].length;
 	}
 
 	public Polygon convertRect(Rectangle r) {
@@ -364,6 +408,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						maze = map.getMaze();
 						explorer = map.getExplorer();
 						end = map.getEnd();
+						
 						if (onMaze2D) {
 							gameState = GameState.MAZE2D;
 						} else {
