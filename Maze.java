@@ -44,7 +44,6 @@ public class Maze {
 			input.close();
 		} catch (IOException e) {
 			System.err.println("File error");
-			//TODO: handle error
 		}
 	}
 

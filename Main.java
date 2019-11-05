@@ -1,6 +1,8 @@
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
@@ -140,6 +142,29 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 	}
 
+	public void paintCompass(Graphics2D g2) {
+		BufferedImage east, north, west, south;
+		try {
+			east = ImageIO.read(new File("./img/compass_east.png"));
+			north = ImageIO.read(new File("./img/compass_north.png"));
+			west = ImageIO.read(new File("./img/compass_west.png"));
+			south = ImageIO.read(new File("./img/compass_south.png"));
+
+			switch (explorer.getDir()) {
+				case EAST: g2.drawImage(east, 800, 50, this);
+					break;
+				case NORTH: g2.drawImage(north, 800, 50, this);
+					break;
+				case WEST: g2.drawImage(west, 800, 50, this);
+					break;
+				case SOUTH: g2.drawImage(south, 800, 50, this);
+					break;
+			}
+		} catch (IOException e) {
+			System.err.println("Image not found");
+		}
+	}
+
 	public void paintMaze3D(Graphics2D g2) {
 		ArrayList<Wall3D> walls = getWalls();
 		for (int i = 0; i < walls.size(); i++) {
@@ -148,6 +173,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			g2.setColor(Color.BLACK);
 			g2.draw(walls.get(i).getPolygon());
 		}
+
+		paintCompass(g2);
 	}
 
 	public ArrayList<Wall3D> getWalls() {
