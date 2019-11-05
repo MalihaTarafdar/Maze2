@@ -13,7 +13,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 	private JFrame frame;
 	private Thread thread;
-	
 	private Structure[][] maze;
 	private GameState gameState = GameState.MAIN_MENU;
 	private Explorer explorer;
@@ -23,15 +22,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private Menu pauseMenu = new Menu("Resume", "Quit");
 	private StatTracker tracker = new StatTracker();
 	
-	private boolean onMaze2D;
-	private boolean paused;
-	private boolean win;
-	private boolean newHighScore;
-	private int mazeNum;
-	private double duration; //in seconds
-	private long startTime; //in nanoseconds
-	private long endTime; //in nanoseconds
-
 	private Font title = new Font("Positive System", Font.PLAIN, 100);
 	private Font main = new Font("Game Over", Font.PLAIN, 70);
 	private Font other = new Font("Game Over", Font.PLAIN, 100);
@@ -39,7 +29,18 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private FontMetrics mm;
 	private FontMetrics om;
 
-	private final int RENDER_DISTANCE = 4; //for 3D maze
+	private boolean onMaze2D;
+	private boolean paused;
+	private boolean win;
+	private int mazeNum;
+	private double duration; //in seconds
+	private long startTime; //in nanoseconds
+	private long endTime; //in nanoseconds
+	
+	private final int RENDER_DISTANCE = 4;
+	private int colorIncrement = 25;
+	private int startColor = 160;
+	private boolean newHighScore = false;
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
@@ -86,11 +87,11 @@ public class Main extends JPanel implements KeyListener, Runnable {
 				case GAME_OVER:
 					endTime = System.nanoTime();
 					duration += (endTime - startTime) / 1000000000.0;
-					if (duration < tracker.getMazeStats(mazeNum).getBestTime() || tracker.getMazeStats(mazeNum).getBestTime() == 0) {
-						tracker.getMazeStats(mazeNum).setBestTime(duration);
-						newHighScore = true;
-					} else {
-						newHighScore = false;
+					if (win) {
+						if (duration < tracker.getMazeStats(mazeNum).getBestTime() || tracker.getMazeStats(mazeNum).getBestTime() == 0) {
+							tracker.getMazeStats(mazeNum).setBestTime(duration);
+							newHighScore = true;
+						}
 					}
 					delay(1500);
 					gameState = GameState.MAIN_MENU;
@@ -118,7 +119,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		mm = g2.getFontMetrics(main);
 		om = g2.getFontMetrics(other);
 
-		//TODO: Compass and health
+		//TODO: Save stats
+		//TODO: Paint end
 		//TODO: Paint escape to go back
 		switch (gameState) {
 			case MAIN_MENU: paintMenu(g2);
@@ -151,13 +153,13 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			south = ImageIO.read(new File("./img/compass_south.png"));
 
 			switch (explorer.getDir()) {
-				case EAST: g2.drawImage(east, 800, 50, this);
+				case EAST: g2.drawImage(east, 780, 20, this);
 					break;
-				case NORTH: g2.drawImage(north, 800, 50, this);
+				case NORTH: g2.drawImage(north, 780, 20, this);
 					break;
-				case WEST: g2.drawImage(west, 800, 50, this);
+				case WEST: g2.drawImage(west, 780, 20, this);
 					break;
-				case SOUTH: g2.drawImage(south, 800, 50, this);
+				case SOUTH: g2.drawImage(south, 780, 20, this);
 					break;
 			}
 		} catch (IOException e) {
@@ -175,20 +177,50 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 
 		paintCompass(g2);
+
+		//health
+		g2.setColor(Color.RED);
+		g2.fillRect(250, 15, explorer.getHealth() * 5, 50);
+
+		g2.setStroke(new BasicStroke(5));
+		g2.setFont(other);
+		g2.setColor(Color.WHITE);
+		g2.drawString(explorer.getHealth() + "", 240 - om.stringWidth(explorer.getHealth() + ""), 15 + om.getHeight() / 3 * 2);
+		g2.drawRect(250, 15, 500, 50);
 	}
 
+	public void darkenMaze() {
+		double time = Math.round((System.nanoTime() - startTime) / 1000000000.0 * 100.0) / 100.0;
+		if (time % 0.5 == 0) {
+			startColor--;
+			if (startColor < 4 * colorIncrement) {
+				colorIncrement--;
+				if (colorIncrement < 0)
+					colorIncrement = 0;
+				startColor = 4 * colorIncrement;
+			}
+		}
+		if (startColor < 20) {
+			if (time % 1.0 == 0) {
+				explorer.takeDamage(10);
+			}
+		}
+	}
+	
 	public ArrayList<Wall3D> getWalls() {
 		int currentRow = explorer.getLoc().getRow(), currentCol = explorer.getLoc().getCol();
 		ArrayList<Wall3D> walls = new ArrayList<Wall3D>();
 		Wall3D frontWall = null;
+
+		darkenMaze();
 
 		for (int d = 0; d < RENDER_DISTANCE; d++) {
 			final int WIDTH = 80;
 			final int HEIGHT = 80;
 			int[] xpoints = {WIDTH * d, HEIGHT + WIDTH * d, HEIGHT + WIDTH * d, WIDTH * d};
 			int[] ypoints = {WIDTH * d, HEIGHT + WIDTH * d, frame.getHeight() - HEIGHT - WIDTH * d, frame.getHeight() - WIDTH * d};
-			Color color = new Color(128 - 25 * d, 128 - 25 * d, 128 - 25 * d);
-			Color darkerColor = new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25);
+			Color color = new Color(startColor - colorIncrement * d, startColor - colorIncrement * d, startColor - colorIncrement * d);
+			Color darkerColor = new Color(color.getRed() - colorIncrement, color.getGreen() - colorIncrement, color.getBlue() - colorIncrement);
 			boolean hasFrontWall = false;
 
 			switch(explorer.getDir()) {
@@ -228,7 +260,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			
 			//rectangles to give effect of hallways
 			Polygon hall = convertRect(new Rectangle(xpoints[0] - WIDTH, ypoints[0], WIDTH, ypoints[ypoints.length - 1] - ypoints[0]));
-			walls.add(0, new Wall3D(hall, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25))); //left
+			walls.add(0, new Wall3D(hall, darkerColor)); //left
 			walls.add(0, new Wall3D(reflectPolygon(hall, false), darkerColor)); //right
 			
 			//front wall
@@ -428,6 +460,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			} else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 				if (pauseMenu.getOptions()[1].isSelected()) {
 					gameState = GameState.MAIN_MENU;
+					reset();
 				}
 				paused = false;
 				startTime = System.nanoTime();
@@ -515,12 +548,14 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			levelSelectMenu.resetOptions();
 			pauseMenu.resetOptions();
 		}
-		// repaint();
 	}
 	public void keyReleased(KeyEvent e) {}
 	public void keyTyped(KeyEvent e) {}
 
 	public void reset() {
+		startColor = 160;
+		colorIncrement = 25;
+		newHighScore = false;
 		duration = 0;
 		win = false;
 		for (int i = 0; i < maze.length; i++) {
