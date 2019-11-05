@@ -16,15 +16,19 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private GameState gameState = GameState.MAIN_MENU;
 	private Explorer explorer;
 	private Location end;
-	private Maze map;
+	private Menu mainMenu = new Menu("2D Maze", "3D Maze", "Stats", "Quit");
+	private Menu levelSelectMenu = new Menu("Level 1", "Level 2", "Level 3");
+	private Menu pauseMenu = new Menu("Resume", "Quit");
+	private StatTracker tracker = new StatTracker();
 	
 	private boolean onMaze2D;
 	private boolean paused;
 	private boolean win;
-	
-	private Menu mainMenu = new Menu("2D Maze", "3D Maze", "Settings", "Quit");
-	private Menu levelSelectMenu = new Menu("Level 1", "Level 2", "Level 3");
-	private Menu pauseMenu = new Menu("Resume", "Quit");
+	private boolean newHighScore;
+	private int mazeNum;
+	private double duration; //in seconds
+	private long startTime; //in nanoseconds
+	private long endTime; //in nanoseconds
 
 	private Font title = new Font("Positive System", Font.PLAIN, 100);
 	private Font main = new Font("Game Over", Font.PLAIN, 70);
@@ -33,10 +37,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private FontMetrics mm;
 	private FontMetrics om;
 
-	private final int renderDistance = 4;
+	private final int RENDER_DISTANCE = 4; //for 3D maze
 
 	enum GameState {
-		MAIN_MENU, LEVEL_SELECT, SETTINGS, MAZE2D, MAZE3D, GAME_OVER;
+		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
 	}
 
 	public Main() {		
@@ -45,6 +49,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/Positive System.otf")));
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/game_over.ttf")));
 		} catch (IOException | FontFormatException e) {}
+
+		//TODO: Music, graphics
 
 		frame = new JFrame("Maze");
 		frame.add(this);
@@ -66,15 +72,25 @@ public class Main extends JPanel implements KeyListener, Runnable {
 				case MAZE3D:
 					if (explorer.getHealth() == 0) {
 						win = false;
+						tracker.getMazeStats(mazeNum).incrementNumLosses();
 						gameState = GameState.GAME_OVER;
 					}
 					if (explorer.getLoc().getRow() == end.getRow() && explorer.getLoc().getCol() == end.getCol()) {
 						win = true;
+						tracker.getMazeStats(mazeNum).incrementNumWins();
 						gameState = GameState.GAME_OVER;
 					}
 					break;
 				case GAME_OVER:
-					delay(1000);
+					endTime = System.nanoTime();
+					duration += (endTime - startTime) / 1000000000.0;
+					if (duration < tracker.getMazeStats(mazeNum).getBestTime() || tracker.getMazeStats(mazeNum).getBestTime() == 0) {
+						tracker.getMazeStats(mazeNum).setBestTime(duration);
+						newHighScore = true;
+					} else {
+						newHighScore = false;
+					}
+					delay(1500);
 					gameState = GameState.MAIN_MENU;
 					reset();
 					repaint();
@@ -83,7 +99,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					break;
 				case LEVEL_SELECT:
 					break;
-				case SETTINGS:
+				case STATS:
 					break;
 			}
 			repaint();
@@ -100,6 +116,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		mm = g2.getFontMetrics(main);
 		om = g2.getFontMetrics(other);
 
+		//TODO: Compass and health
+		//TODO: Paint escape to go back
 		switch (gameState) {
 			case MAIN_MENU: paintMenu(g2);
 				break;
@@ -115,7 +133,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					paintPauseMenu(g2);
 				}
 				break;
-			case SETTINGS: paintSettings(g2);
+			case STATS: paintStats(g2);
 				break;
 			case GAME_OVER: paintGameOver(g2);
 				break;
@@ -137,11 +155,11 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		ArrayList<Wall3D> walls = new ArrayList<Wall3D>();
 		Wall3D frontWall = null;
 
-		for (int d = 0; d < renderDistance; d++) {
-			final int width = 80;
-			final int height = 80;
-			int[] xpoints = {width * d, height + width * d, height + width * d, width * d};
-			int[] ypoints = {width * d, height + width * d, frame.getHeight() - height - width * d, frame.getHeight() - width * d};
+		for (int d = 0; d < RENDER_DISTANCE; d++) {
+			final int WIDTH = 80;
+			final int HEIGHT = 80;
+			int[] xpoints = {WIDTH * d, HEIGHT + WIDTH * d, HEIGHT + WIDTH * d, WIDTH * d};
+			int[] ypoints = {WIDTH * d, HEIGHT + WIDTH * d, frame.getHeight() - HEIGHT - WIDTH * d, frame.getHeight() - WIDTH * d};
 			Color color = new Color(128 - 25 * d, 128 - 25 * d, 128 - 25 * d);
 			Color darkerColor = new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25);
 			boolean hasFrontWall = false;
@@ -182,10 +200,17 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			}
 			
 			//rectangles to give effect of hallways
-			Polygon hall = convertRect(new Rectangle(xpoints[0] - width, ypoints[0], width, ypoints[ypoints.length - 1] - ypoints[0]));
-			walls.add(0, new Wall3D(hall, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25)));
-			walls.add(0, new Wall3D(reflectPolygon(hall, false), darkerColor));
+			Polygon hall = convertRect(new Rectangle(xpoints[0] - WIDTH, ypoints[0], WIDTH, ypoints[ypoints.length - 1] - ypoints[0]));
+			walls.add(0, new Wall3D(hall, new Color(color.getRed() - 25, color.getGreen() - 25, color.getBlue() - 25))); //left
+			walls.add(0, new Wall3D(reflectPolygon(hall, false), darkerColor)); //right
 			
+			//front wall
+			if (hasFrontWall && frontWall == null) {
+				frontWall = new Wall3D(convertRect(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor);
+				walls.add(0, new Wall3D(convertRect(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //left
+				walls.add(0, new Wall3D(convertRect(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //right
+			}
+
 			//ceiling
 			Polygon ceiling = new Polygon();
 			ceiling.addPoint(0, ypoints[3]);
@@ -196,13 +221,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 			//floor
 			walls.add(0, new Wall3D(reflectPolygon(ceiling, true), darkerColor));
-
-			//front wall
-			if (hasFrontWall && frontWall == null) {
-				frontWall = new Wall3D(convertRect(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor);
-				walls.add(2, new Wall3D(convertRect(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor));
-				walls.add(2, new Wall3D(convertRect(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor));
-			}
 		}
 
 		//front wall should always be on top
@@ -221,6 +239,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		int[] ypoints = {(int)r.getY(), (int)(r.getY()), (int)(r.getY() + r.getHeight()), (int)(r.getY() + r.getHeight())};
 		return new Polygon(xpoints, ypoints, 4);
 	}
+
 	public Polygon reflectPolygon(Polygon p, boolean horizontal) {
 		Polygon reflectedP = new Polygon();
 		for (int i = 0; i < p.npoints; i++) {
@@ -284,8 +303,30 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 	}
 
-	public void paintSettings(Graphics2D g2) {
+	public void paintStats(Graphics2D g2) {
+		int titleX = frame.getWidth() / 2 - om.stringWidth("Statistics") / 2;
+		int titleY = frame.getHeight() / 10;
+		g2.setFont(other);
+		g2.setPaint(new GradientPaint(titleX, titleY, Color.BLUE, titleX + om.stringWidth("Statistics"), titleY + om.getHeight(), Color.CYAN));
+		g2.drawString("Statistics", titleX, titleY);
 
+		g2.setFont(main);
+		for (int i = 1; i <= 3; i++) {
+			int x = frame.getWidth() / 6;
+			int y = frame.getHeight() / 6 + 220 * (i - 1);
+			g2.setColor(Color.BLUE);
+			g2.drawString("Maze " + i, x, y);
+			
+			g2.setColor(Color.WHITE);
+			y += mm.getHeight();
+			g2.drawString("Best Time: " + Math.round(tracker.getMazeStats(i).getBestTime() * 1000) / 1000.0 + " seconds", x, y);
+			y += mm.getHeight();
+			g2.drawString("Total Attempts: " + tracker.getMazeStats(i).getNumAttempts() + " attempts", x, y);
+			y += mm.getHeight();
+			g2.drawString("Total Wins: " + tracker.getMazeStats(i).getNumWins() + " wins", x, y);
+			y += mm.getHeight();
+			g2.drawString("Total Losses: " + tracker.getMazeStats(i).getNumLosses() + " losses", x, y);
+		}
 	}
 
 	public void paintGameOver(Graphics2D g2) {
@@ -295,6 +336,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			g2.drawString("YOU WIN", frame.getWidth() / 2 - om.stringWidth("YOU WIN") / 2, frame.getHeight() / 2);
 		} else {
 			g2.drawString("YOU LOSE", frame.getWidth() / 2 - om.stringWidth("YOU LOSE") / 2, frame.getHeight() / 2);
+		}
+		if (newHighScore) {
+			g2.setFont(main);
+			g2.drawString("New high score!", frame.getWidth() / 2 - mm.stringWidth("New high score!") / 2, frame.getHeight() / 2 + om.getHeight());
 		}
 	}
 
@@ -358,6 +403,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					gameState = GameState.MAIN_MENU;
 				}
 				paused = false;
+				startTime = System.nanoTime();
 			}
 		} else {
 			switch (gameState) {
@@ -371,6 +417,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						explorer.turn(Explorer.RelativeDirection.RIGHT);
 					} else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						paused = true;
+						endTime = System.nanoTime();
+						duration += (endTime - startTime) / 1000000000.0;
 					}
 					break;
 				case MAIN_MENU:
@@ -386,13 +434,14 @@ public class Main extends JPanel implements KeyListener, Runnable {
 							onMaze2D = false;
 							gameState = GameState.LEVEL_SELECT;
 						} else if (mainMenu.getOptions()[2].isSelected()) {
-							gameState = GameState.SETTINGS;
+							gameState = GameState.STATS;
 						} else {
 							System.exit(0);
 						}
 					}
 					break;
 				case LEVEL_SELECT:
+					Maze map;
 					if (e.getKeyCode() == KeyEvent.VK_LEFT) {
 						levelSelectMenu.moveBackward();
 					} else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
@@ -400,15 +449,21 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					} else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 						if (levelSelectMenu.getOptions()[0].isSelected()) {
 							map = new Maze(new File("./mazes/maze1.txt"));
+							mazeNum = 1;
 						} else if (levelSelectMenu.getOptions()[1].isSelected()) {
 							map = new Maze(new File("./mazes/maze2.txt"));
+							mazeNum = 2;
 						} else {
 							map = new Maze(new File("./mazes/maze3.txt"));
+							mazeNum = 3;
 						}
 						maze = map.getMaze();
 						explorer = map.getExplorer();
 						end = map.getEnd();
-						
+						tracker.getMazeStats(mazeNum).incrementNumAttempts();
+						duration = 0;
+						startTime = System.nanoTime();
+
 						if (onMaze2D) {
 							gameState = GameState.MAZE2D;
 						} else {
@@ -418,7 +473,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						gameState = GameState.MAIN_MENU;
 					}
 					break;
-				case SETTINGS:
+				case STATS:
 					if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						gameState = GameState.MAIN_MENU;
 					}
@@ -433,12 +488,13 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			levelSelectMenu.resetOptions();
 			pauseMenu.resetOptions();
 		}
-		repaint();
+		// repaint();
 	}
 	public void keyReleased(KeyEvent e) {}
 	public void keyTyped(KeyEvent e) {}
 
 	public void reset() {
+		duration = 0;
 		win = false;
 		for (int i = 0; i < maze.length; i++) {
 			for (int j = 0; j < maze[0].length; j++) {
