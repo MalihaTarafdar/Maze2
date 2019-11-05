@@ -12,7 +12,7 @@ public class Maze {
 	public Maze(File map) {
 		try {
 			int row = 0, col = 0;
-			final int size = 12;
+			final int SIZE = 12;
 			BufferedReader temp = new BufferedReader(new FileReader(map));
 			String line;
 			int maxRow = 0, maxCol = 0;
@@ -30,9 +30,9 @@ public class Maze {
 				for (int i = 0; i < text.length(); i++) {
 					char c = text.charAt(i);
 					if (c == '*') {
-						maze[row][col] = new Wall(row, col, size);
+						maze[row][col] = new Wall(row, col, SIZE);
 					} else if (c == 'S') {
-						explorer = new Explorer(row, col, size, 0);
+						explorer = new Explorer(row, col, SIZE, 0);
 					} else if (c == 'E') {
 						end = new Location(row, col);
 					}

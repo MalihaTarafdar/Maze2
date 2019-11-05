@@ -69,8 +69,9 @@ public class Explorer {
 			case 0: return CardinalDirection.EAST;
 			case 1: return CardinalDirection.NORTH;
 			case 2: return CardinalDirection.WEST;
+			case 3: return CardinalDirection.SOUTH;
 		}
-		return CardinalDirection.SOUTH;
+		throw new IllegalArgumentException("Impossible direction");
 	}
 
 	public void heal(int healAmount) {
