@@ -1,11 +1,11 @@
+import javax.swing.*;
+import java.io.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
+import javax.sound.sampled.*;
 import java.util.ArrayList;
 
 public class Main extends JPanel implements KeyListener, Runnable {
@@ -29,6 +29,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private FontMetrics mm;
 	private FontMetrics om;
 
+	private Clip clip;
+
 	private boolean onMaze2D;
 	private boolean paused;
 	private boolean win;
@@ -41,19 +43,27 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private int colorIncrement = 25;
 	private int startColor = 160;
 	private boolean newHighScore = false;
+	
+	//FIXME: maze maps
+	//FIXME: Pause menu
+	//TODO: Paint end
+	//TODO: Paint escape to go back
+	//TODO: On-screen timer
+	
+	//TODO: 2D Maze graphics
+	//TODO: Save stats
+	//FIXME: Tracker applies to 2D maze
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
 	}
 
-	public Main() {		
+	public Main() {
 		try {
 			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/Positive System.otf")));
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/game_over.ttf")));
 		} catch (IOException | FontFormatException e) {}
-
-		//TODO: Music, graphics
 
 		frame = new JFrame("Maze");
 		frame.add(this);
@@ -66,6 +76,27 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 		thread = new Thread(this);
 		thread.start();
+
+		try {
+			clip = AudioSystem.getClip();
+			clip.open(AudioSystem.getAudioInputStream(new BufferedInputStream(getClass().getResourceAsStream("./sounds/menu_music.wav"))));
+			clip.loop(Clip.LOOP_CONTINUOUSLY);
+			clip.start();
+		} catch (LineUnavailableException | UnsupportedAudioFileException | IOException e) {
+			System.err.println("An audio exception has occurred.");
+		}
+	}
+
+	public void playMusic(String path) {
+		try {
+			clip.stop();
+			clip.close();
+			clip.open(AudioSystem.getAudioInputStream(new BufferedInputStream(getClass().getResourceAsStream(path))));
+			clip.loop(Clip.LOOP_CONTINUOUSLY);
+			clip.start();
+		} catch (LineUnavailableException | UnsupportedAudioFileException | IOException e) {
+			System.err.println("An audio exception has occurred.");
+		}
 	}
 
 	public void run() {
@@ -119,9 +150,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		mm = g2.getFontMetrics(main);
 		om = g2.getFontMetrics(other);
 
-		//TODO: Save stats
-		//TODO: Paint end
-		//TODO: Paint escape to go back
 		switch (gameState) {
 			case MAIN_MENU: paintMenu(g2);
 				break;
@@ -191,10 +219,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 	public void darkenMaze() {
 		double time = Math.round((System.nanoTime() - startTime) / 1000000000.0 * 100.0) / 100.0;
-		if (time % 0.5 == 0) {
-			startColor--;
-			if (startColor < 4 * colorIncrement) {
-				colorIncrement--;
+		if (time % 1.0 == 0) {
+			startColor--; //darken color over time
+			if (startColor < 4 * colorIncrement) { //check color range
+				colorIncrement--; //less distance between colors
 				if (colorIncrement < 0)
 					colorIncrement = 0;
 				startColor = 4 * colorIncrement;
@@ -202,7 +230,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 		if (startColor < 20) {
 			if (time % 1.0 == 0) {
-				explorer.takeDamage(10);
+				explorer.takeDamage(10); //explorer starts to take damage once maze is too dark
 			}
 		}
 	}
@@ -337,7 +365,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 		g2.setColor(explorer.getColor());
 		g2.fillOval(explorer.getLoc().getCol() * explorer.getSize(), explorer.getLoc().getRow() * explorer.getSize(), explorer.getSize(), explorer.getSize());
-		g2.drawString(explorer.getDir() + "", 800, 50);
+		paintCompass(g2);
 	}
 
 	public void paintPauseMenu(Graphics2D g2) {
@@ -520,6 +548,9 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						maze = map.getMaze();
 						explorer = map.getExplorer();
 						end = map.getEnd();
+
+						playMusic("./sounds/maze_music.wav");
+
 						tracker.getMazeStats(mazeNum).incrementNumAttempts();
 						duration = 0;
 						startTime = System.nanoTime();
@@ -553,6 +584,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	public void keyTyped(KeyEvent e) {}
 
 	public void reset() {
+		playMusic("./sounds/menu_music.wav");
 		startColor = 160;
 		colorIncrement = 25;
 		newHighScore = false;
@@ -572,6 +604,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	}
 
 	public static void main(String[] args) {
-		Main game = new Main();
+		new Main();
 	}
 }
