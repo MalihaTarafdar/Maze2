@@ -45,11 +45,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private boolean newHighScore = false;
 	
 	//FIXME: maze maps
-	//FIXME: Pause menu
 	//TODO: Paint end
-	//TODO: Paint escape to go back
-	//TODO: On-screen timer
+	//TODO: Maze images
 	
+	//TODO: On-screen timer
 	//TODO: 2D Maze graphics
 	//TODO: Save stats
 	//FIXME: Tracker applies to 2D maze
@@ -154,6 +153,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			case MAIN_MENU: paintMenu(g2);
 				break;
 			case LEVEL_SELECT: paintLevelSelect(g2);
+				paintEsc(g2);
 				break;
 			case MAZE2D: paintMaze2D(g2);
 				if (paused) {
@@ -166,13 +166,14 @@ public class Main extends JPanel implements KeyListener, Runnable {
 				}
 				break;
 			case STATS: paintStats(g2);
+				paintEsc(g2);
 				break;
 			case GAME_OVER: paintGameOver(g2);
 				break;
 		}
 	}
 
-	public void paintCompass(Graphics2D g2) {
+	public void paintCompass(Graphics2D g2, int height) {
 		BufferedImage east, north, west, south;
 		try {
 			east = ImageIO.read(new File("./img/compass_east.png"));
@@ -181,18 +182,25 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			south = ImageIO.read(new File("./img/compass_south.png"));
 
 			switch (explorer.getDir()) {
-				case EAST: g2.drawImage(east, 780, 20, this);
+				case EAST: g2.drawImage(east, 780, height, this);
 					break;
-				case NORTH: g2.drawImage(north, 780, 20, this);
+				case NORTH: g2.drawImage(north, 780, height, this);
 					break;
-				case WEST: g2.drawImage(west, 780, 20, this);
+				case WEST: g2.drawImage(west, 780, height, this);
 					break;
-				case SOUTH: g2.drawImage(south, 780, 20, this);
+				case SOUTH: g2.drawImage(south, 780, height, this);
 					break;
 			}
 		} catch (IOException e) {
 			System.err.println("Image not found");
 		}
+	}
+
+	public void paintEsc(Graphics2D g2) {
+		g2.setFont(main);
+		g2.setPaint(new GradientPaint(40, 40, Color.BLUE, 72, 50, Color.CYAN));
+		g2.drawRect(30, 30, 72, 50);
+		g2.drawString("ESC", 40, 65);
 	}
 
 	public void paintMaze3D(Graphics2D g2) {
@@ -204,10 +212,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			g2.draw(walls.get(i).getPolygon());
 		}
 
-		paintCompass(g2);
+		paintCompass(g2, 20);
 
 		//health
-		g2.setColor(Color.RED);
+		g2.setColor(new Color(160, 0, 0));
 		g2.fillRect(250, 15, explorer.getHealth() * 5, 50);
 
 		g2.setStroke(new BasicStroke(5));
@@ -365,27 +373,28 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 		g2.setColor(explorer.getColor());
 		g2.fillOval(explorer.getLoc().getCol() * explorer.getSize(), explorer.getLoc().getRow() * explorer.getSize(), explorer.getSize(), explorer.getSize());
-		paintCompass(g2);
+		paintCompass(g2, 400);
 	}
 
 	public void paintPauseMenu(Graphics2D g2) {
+		int x = frame.getWidth() / 2 - 100;
 		g2.setColor(Color.WHITE);
-		g2.fillRect(350, 100, 200, 200);
+		g2.fillRect(x, 120, 200, 160);
 		g2.setColor(Color.BLACK);
-		g2.fillRect(360, 110, 180, 180);
+		g2.fillRect(x + 10, 130, 180, 140);
 
 		g2.setFont(main);
 		g2.setColor(Color.WHITE);
 		int optionY = 180;
 		for (Menu.Option option : pauseMenu.getOptions()) {
-			g2.drawString(option.getName(), 420, optionY);
+			g2.drawString(option.getName(), x + 70, optionY);
 			optionY += 50;
 		}
 		for (int i = 0; i < pauseMenu.getOptions().length; i++) {
 			if (pauseMenu.getOptions()[i].isSelected()) {
 				optionY = 165 + 50 * i;
 				g2.setColor(Color.BLUE);
-				g2.fillRect(390, optionY, 10, 10);
+				g2.fillRect(x + 40, optionY, 10, 10);
 			}
 		}
 	}
