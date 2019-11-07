@@ -14,7 +14,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private JFrame frame;
 	private Thread thread;
 	private Structure[][] maze;
-	private GameState gameState = GameState.MAIN_MENU;
+	private GameState gameState;
 	private Explorer explorer;
 	private Location end;
 	private Menu mainMenu = new Menu("2D Maze", "3D Maze", "Stats", "Quit");
@@ -22,9 +22,9 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private Menu pauseMenu = new Menu("Resume", "Quit");
 	private StatTracker tracker = new StatTracker();
 	
-	private Font title = new Font("Positive System", Font.PLAIN, 100);
-	private Font main = new Font("Game Over", Font.PLAIN, 70);
-	private Font other = new Font("Game Over", Font.PLAIN, 100);
+	private final Font title = new Font("Positive System", Font.PLAIN, 100);
+	private final Font main = new Font("Game Over", Font.PLAIN, 70);
+	private final Font other = new Font("Game Over", Font.PLAIN, 100);
 	private FontMetrics tm;
 	private FontMetrics mm;
 	private FontMetrics om;
@@ -44,25 +44,27 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private int startColor = 160;
 	private boolean newHighScore = false;
 	
-	//FIXME: maze maps
-	//TODO: Paint end
-	//TODO: Maze images
+	//TODO: maze maps
+	//TODO: Maze images (level select)
 	
-	//TODO: On-screen timer
 	//TODO: 2D Maze graphics
 	//TODO: Save stats
-	//FIXME: Tracker applies to 2D maze
+	//TODO: Separate 2D and 3D maze stats
+	//TODO: On-screen timer
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
 	}
 
 	public Main() {
+		//register fonts
 		try {
 			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/Positive System.otf")));
 			ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("./fonts/game_over.ttf")));
 		} catch (IOException | FontFormatException e) {}
+
+		gameState = GameState.MAIN_MENU;
 
 		frame = new JFrame("Maze");
 		frame.add(this);
@@ -76,6 +78,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		thread = new Thread(this);
 		thread.start();
 
+		//start music
 		try {
 			clip = AudioSystem.getClip();
 			clip.open(AudioSystem.getAudioInputStream(new BufferedInputStream(getClass().getResourceAsStream("./sounds/menu_music.wav"))));
@@ -108,7 +111,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						tracker.getMazeStats(mazeNum).incrementNumLosses();
 						gameState = GameState.GAME_OVER;
 					}
-					if (explorer.getLoc().getRow() == end.getRow() && explorer.getLoc().getCol() == end.getCol()) {
+					if (isEnd(explorer.getLoc().getRow(), explorer.getLoc().getCol())) {
 						win = true;
 						tracker.getMazeStats(mazeNum).incrementNumWins();
 						gameState = GameState.GAME_OVER;
@@ -137,6 +140,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			}
 			repaint();
 		}
+	}
+
+	public boolean isEnd(int row, int col) {
+		return row == end.getRow() && col == end.getCol();
 	}
 
 	public void paintComponent(Graphics g) {
@@ -217,12 +224,19 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		//health
 		g2.setColor(new Color(160, 0, 0));
 		g2.fillRect(250, 15, explorer.getHealth() * 5, 50);
-
 		g2.setStroke(new BasicStroke(5));
 		g2.setFont(other);
 		g2.setColor(Color.WHITE);
 		g2.drawString(explorer.getHealth() + "", 240 - om.stringWidth(explorer.getHealth() + ""), 15 + om.getHeight() / 3 * 2);
 		g2.drawRect(250, 15, 500, 50);
+
+		//losing-light warning
+		if (startColor < 140) {
+			g2.setColor(new Color(255, 255, 255, 120));
+			g2.setFont(main);
+			String warning = "You are losing light! Quickly exit the maze!";
+			g2.drawString(warning, frame.getWidth() / 2 - mm.stringWidth(warning) / 2, 760);
+		}
 	}
 
 	public void darkenMaze() {
@@ -251,71 +265,66 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		darkenMaze();
 
 		for (int d = 0; d < RENDER_DISTANCE; d++) {
-			final int WIDTH = 80;
-			final int HEIGHT = 80;
-			int[] xpoints = {WIDTH * d, HEIGHT + WIDTH * d, HEIGHT + WIDTH * d, WIDTH * d};
-			int[] ypoints = {WIDTH * d, HEIGHT + WIDTH * d, frame.getHeight() - HEIGHT - WIDTH * d, frame.getHeight() - WIDTH * d};
-			Color color = new Color(startColor - colorIncrement * d, startColor - colorIncrement * d, startColor - colorIncrement * d);
-			Color darkerColor = new Color(color.getRed() - colorIncrement, color.getGreen() - colorIncrement, color.getBlue() - colorIncrement);
-			boolean hasFrontWall = false;
+			final int WIDTH = 80, HEIGHT = 80;
+			final int[] xpoints = {WIDTH * d, HEIGHT + WIDTH * d, HEIGHT + WIDTH * d, WIDTH * d};
+			final int[] ypoints = {WIDTH * d, HEIGHT + WIDTH * d, frame.getHeight() - HEIGHT - WIDTH * d, frame.getHeight() - WIDTH * d};
+			final Color color = new Color(startColor - colorIncrement * d, startColor - colorIncrement * d, startColor - colorIncrement * d);
+			final Color darkerColor = new Color(color.getRed() - colorIncrement, color.getGreen() - colorIncrement, color.getBlue() - colorIncrement);
+			Location leftWallLoc, rightWallLoc, centerWallLoc;
 
 			switch(explorer.getDir()) {
 				case EAST:
-					if (isOutOfBounds(currentRow - 1, currentCol + d) || maze[currentRow - 1][currentCol + d] instanceof Wall) //left walls
-						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
-					if (isOutOfBounds(currentRow + 1, currentCol + d) || maze[currentRow + 1][currentCol + d] instanceof Wall) //right walls
-						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
-					if (currentCol + d >= maze[0].length || maze[currentRow][currentCol + d] instanceof Wall)
-						hasFrontWall = true;
+					leftWallLoc = new Location(currentRow - 1, currentCol + d);
+					rightWallLoc = new Location(currentRow + 1, currentCol + d);
+					centerWallLoc = new Location(currentRow, currentCol + d);
 					break;
 				case NORTH:
-					if (isOutOfBounds(currentRow - d, currentCol - 1) || maze[currentRow - d][currentCol - 1] instanceof Wall) //left walls
-						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
-					if (isOutOfBounds(currentRow - d, currentCol + 1) || maze[currentRow - d][currentCol + 1] instanceof Wall) //right walls
-						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
-					if (currentRow - d < 0 || maze[currentRow - d][currentCol] instanceof Wall)
-						hasFrontWall = true;
+					leftWallLoc = new Location(currentRow - d, currentCol - 1);
+					rightWallLoc = new Location(currentRow - d, currentCol + 1);
+					centerWallLoc = new Location(currentRow - d, currentCol);
 					break;
 				case WEST:
-					if (isOutOfBounds(currentRow + 1, currentCol - d) || maze[currentRow + 1][currentCol - d] instanceof Wall) //left walls
-						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
-					if (isOutOfBounds(currentRow - 1, currentCol - d) || maze[currentRow - 1][currentCol - d] instanceof Wall) //right walls
-						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
-					if (currentCol - d < 0 || maze[currentRow][currentCol - d] instanceof Wall)
-						hasFrontWall = true;
+					leftWallLoc = new Location(currentRow + 1, currentCol - d);
+					rightWallLoc = new Location(currentRow - 1, currentCol - d);
+					centerWallLoc = new Location(currentRow, currentCol - d);
 					break;
 				case SOUTH:
-					if (isOutOfBounds(currentRow + d, currentCol + 1) || maze[currentRow + d][currentCol + 1] instanceof Wall) //left walls
-						walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), color));
-					if (isOutOfBounds(currentRow + d, currentCol - 1) || maze[currentRow + d][currentCol - 1] instanceof Wall) //right walls
-						walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), color));
-					if (currentRow + d >= maze.length || maze[currentRow + d][currentCol] instanceof Wall)
-						hasFrontWall = true;
+					leftWallLoc = new Location(currentRow + d, currentCol + 1);
+					rightWallLoc = new Location(currentRow + d, currentCol - 1);
+					centerWallLoc = new Location(currentRow + d, currentCol);
 					break;
+				default: 
+					leftWallLoc = new Location(0, 0);
+					rightWallLoc = new Location(0, 0);
+					centerWallLoc = new Location(0, 0);
+					break;
+			}
+
+			Color c;
+			if (isOutOfBounds(leftWallLoc.getRow(), leftWallLoc.getCol()) || maze[leftWallLoc.getRow()][leftWallLoc.getCol()] instanceof Structure) {
+				c = (isEnd(leftWallLoc.getRow(), leftWallLoc.getCol())) ? Color.WHITE : color; //end is white
+				walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), c));
+			}
+			if (isOutOfBounds(rightWallLoc.getRow(), rightWallLoc.getCol()) || maze[rightWallLoc.getRow()][rightWallLoc.getCol()] instanceof Structure) {
+				c = (isEnd(rightWallLoc.getRow(), rightWallLoc.getCol())) ? Color.WHITE : color; //end is white
+				walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), c));
+			}
+			if ((frontWall == null) && (isOutOfBounds(centerWallLoc.getRow(), centerWallLoc.getCol()) || maze[centerWallLoc.getRow()][centerWallLoc.getCol()] instanceof Structure)) {
+				c = (isEnd(centerWallLoc.getRow(), centerWallLoc.getCol())) ? Color.WHITE : darkerColor; //end is white
+				frontWall = new Wall3D(convertRectToPoly(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), c);
+				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //left
+				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //right
 			}
 			
 			//rectangles to give effect of hallways
-			Polygon hall = convertRect(new Rectangle(xpoints[0] - WIDTH, ypoints[0], WIDTH, ypoints[ypoints.length - 1] - ypoints[0]));
+			Polygon hall = convertRectToPoly(new Rectangle(xpoints[0] - WIDTH, ypoints[0], WIDTH, ypoints[ypoints.length - 1] - ypoints[0]));
 			walls.add(0, new Wall3D(hall, darkerColor)); //left
 			walls.add(0, new Wall3D(reflectPolygon(hall, false), darkerColor)); //right
-			
-			//front wall
-			if (hasFrontWall && frontWall == null) {
-				frontWall = new Wall3D(convertRect(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor);
-				walls.add(0, new Wall3D(convertRect(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //left
-				walls.add(0, new Wall3D(convertRect(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //right
-			}
 
-			//ceiling
-			Polygon ceiling = new Polygon();
-			ceiling.addPoint(0, ypoints[3]);
-			ceiling.addPoint(0, ypoints[2]);
-			ceiling.addPoint(frame.getWidth(), ypoints[2]);
-			ceiling.addPoint(frame.getWidth(), ypoints[3]);
-			walls.add(0, new Wall3D(ceiling, darkerColor));
-
-			//floor
-			walls.add(0, new Wall3D(reflectPolygon(ceiling, true), darkerColor));
+			//ceiligns and floors
+			Polygon ceiling = convertRectToPoly(new Rectangle(0, ypoints[2], frame.getWidth(), ypoints[3] - ypoints[2]));
+			walls.add(0, new Wall3D(ceiling, darkerColor)); //ceiling
+			walls.add(0, new Wall3D(reflectPolygon(ceiling, true), darkerColor)); //floor
 		}
 
 		//front wall should always be on top
@@ -329,7 +338,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		return row < 0 || col < 0 || row >= maze.length || col >= maze[0].length;
 	}
 
-	public Polygon convertRect(Rectangle r) {
+	public Polygon convertRectToPoly(Rectangle r) {
 		int[] xpoints = {(int)r.getX(), (int)(r.getX() + r.getWidth()), (int)(r.getX() + r.getWidth()), (int)(r.getX())};
 		int[] ypoints = {(int)r.getY(), (int)(r.getY()), (int)(r.getY() + r.getHeight()), (int)(r.getY() + r.getHeight())};
 		return new Polygon(xpoints, ypoints, 4);

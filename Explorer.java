@@ -16,11 +16,11 @@ public class Explorer {
 		LEFT, RIGHT;
 	}
 
-	public Explorer(int row, int col, int size, int dir) {
+	public Explorer(int row, int col, int size, int dir, Color color) {
 		loc = new Location(row, col);
 		this.size = size;
+		this.color = color;
 		health = 100;
-		color = Color.BLUE;
 	}
 
 	public void move(Structure[][] maze) {
@@ -35,7 +35,7 @@ public class Explorer {
 			case 3: moveRow++;
 			break;
 		}
-		if (maze[moveRow][moveCol] == null) { //check for collision
+		if (!(maze[moveRow][moveCol] instanceof Wall)) { //check for collision
 			setLoc(moveRow, moveCol);
 		}
 	}

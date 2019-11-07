@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.awt.Color;
 
 public class Maze {
 
@@ -32,9 +33,10 @@ public class Maze {
 					if (c == '*') {
 						maze[row][col] = new Wall(row, col, SIZE);
 					} else if (c == 'S') {
-						explorer = new Explorer(row, col, SIZE, 0);
+						explorer = new Explorer(row, col, SIZE, 0, Color.BLUE);
 					} else if (c == 'E') {
 						end = new Location(row, col);
+						maze[row][col] = new Structure(row, col, SIZE);
 					}
 					col++;
 				}
