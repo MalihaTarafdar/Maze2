@@ -43,7 +43,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private final int RENDER_DISTANCE = 4;
 	private int colorIncrement = 25;
 	private int startColor = 160;
-	private boolean newHighScore = false;
+	private boolean newBestTime = false;
+	private int moveCount = 0;
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
@@ -101,13 +102,16 @@ public class Main extends JPanel implements KeyListener, Runnable {
 					if (isEnd(explorer.getLoc().getRow(), explorer.getLoc().getCol())) {
 						win = true;
 						tracker2D.getMazeStats(mazeNum).incrementNumWins();
-						gameState = GameState.GAME_OVER;
 						endTime = System.nanoTime();
 						duration += (endTime - startTime) / 1000000000.0;
 						if (duration < tracker2D.getMazeStats(mazeNum).getBestTime() || tracker2D.getMazeStats(mazeNum).getBestTime() == 0) {
 							tracker2D.getMazeStats(mazeNum).setBestTime(duration);
-							newHighScore = true;
+							newBestTime = true;
 						}
+						if (moveCount < tracker2D.getMazeStats(mazeNum).getLeastMoves() || tracker2D.getMazeStats(mazeNum).getLeastMoves() == 0) {
+							tracker2D.getMazeStats(mazeNum).setLeastMoves(moveCount);
+						}
+						gameState = GameState.GAME_OVER;
 					}
 					break;
 				case MAZE3D:
@@ -123,7 +127,10 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						duration += (endTime - startTime) / 1000000000.0;
 						if (duration < tracker3D.getMazeStats(mazeNum).getBestTime() || tracker3D.getMazeStats(mazeNum).getBestTime() == 0) {
 							tracker3D.getMazeStats(mazeNum).setBestTime(duration);
-							newHighScore = true;
+							newBestTime = true;
+						}
+						if (moveCount < tracker3D.getMazeStats(mazeNum).getLeastMoves() || tracker3D.getMazeStats(mazeNum).getLeastMoves() == 0) {
+							tracker3D.getMazeStats(mazeNum).setLeastMoves(moveCount);
 						}
 						gameState = GameState.GAME_OVER;
 					}
@@ -305,15 +312,15 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 			Color c;
 			if (isOutOfBounds(leftWallLoc.getRow(), leftWallLoc.getCol()) || maze[leftWallLoc.getRow()][leftWallLoc.getCol()] instanceof Structure) {
-				c = (isEnd(leftWallLoc.getRow(), leftWallLoc.getCol())) ? Color.WHITE : color; //end is white
+				c = (isEnd(leftWallLoc.getRow(), leftWallLoc.getCol())) ? new Color(204, 204, 204) : color; //end is white
 				walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), c));
 			}
 			if (isOutOfBounds(rightWallLoc.getRow(), rightWallLoc.getCol()) || maze[rightWallLoc.getRow()][rightWallLoc.getCol()] instanceof Structure) {
-				c = (isEnd(rightWallLoc.getRow(), rightWallLoc.getCol())) ? Color.WHITE : color; //end is white
+				c = (isEnd(rightWallLoc.getRow(), rightWallLoc.getCol())) ? new Color(204, 204, 204) : color; //end is white
 				walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), c));
 			}
 			if ((frontWall == null) && (isOutOfBounds(centerWallLoc.getRow(), centerWallLoc.getCol()) || maze[centerWallLoc.getRow()][centerWallLoc.getCol()] instanceof Structure)) {
-				c = (isEnd(centerWallLoc.getRow(), centerWallLoc.getCol())) ? Color.WHITE : darkerColor; //end is white
+				c = (isEnd(centerWallLoc.getRow(), centerWallLoc.getCol())) ? new Color(204, 204, 204) : darkerColor; //end is white
 				frontWall = new Wall3D(convertRectToPoly(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), c);
 				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //left
 				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //right
@@ -431,7 +438,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			y += mm.getHeight();
 			g2.drawString("Best Time: " + ((i <= 3) ? Math.round(tracker2D.getMazeStats(i).getBestTime() * 1000) / 1000.0 : Math.round(tracker3D.getMazeStats(i - 3).getBestTime() * 1000) / 1000.0) + " seconds", x, y);
 			y += mm.getHeight();
-			g2.drawString("Total Attempts: " + ((i <= 3) ? tracker2D.getMazeStats(i).getNumAttempts() : tracker3D.getMazeStats(i - 3).getNumAttempts()) + " attempts", x, y);
+			g2.drawString("Least Moves: " + ((i <= 3) ? tracker2D.getMazeStats(i).getLeastMoves() : tracker3D.getMazeStats(i - 3).getLeastMoves()) + " moves", x, y);
 			y += mm.getHeight();
 			g2.drawString("Total Wins: " + ((i <= 3) ? tracker2D.getMazeStats(i).getNumWins() : tracker3D.getMazeStats(i - 3).getNumWins()) + " wins", x, y);
 			y += mm.getHeight();
@@ -447,9 +454,12 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		} else {
 			g2.drawString("YOU LOSE", frame.getWidth() / 2 - om.stringWidth("YOU LOSE") / 2, frame.getHeight() / 2);
 		}
-		if (newHighScore) {
-			g2.setFont(main);
-			g2.drawString("New high score!", frame.getWidth() / 2 - mm.stringWidth("New high score!") / 2, frame.getHeight() / 2 + om.getHeight());
+		
+		g2.setFont(main);
+		g2.drawString("Number of moves: " + moveCount, frame.getWidth() / 2 - mm.stringWidth("Number of moves: " + moveCount) / 2, frame.getHeight() / 2 + om.getHeight());
+
+		if (newBestTime) {
+			g2.drawString("New best time!", frame.getWidth() / 2 - mm.stringWidth("New best time!") / 2, frame.getHeight() / 2 + om.getHeight() * 2);
 		}
 	}
 
@@ -542,6 +552,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 				case MAZE2D:
 					if (e.getKeyCode() == KeyEvent.VK_UP) {
 						explorer.move(maze);
+						moveCount++;
 					} else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
 						explorer.turn(Explorer.RelativeDirection.LEFT);
 					} else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
@@ -598,10 +609,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 						startTime = System.nanoTime();
 						
 						if (onMaze2D) {
-							tracker2D.getMazeStats(mazeNum).incrementNumAttempts();
 							gameState = GameState.MAZE2D;
 						} else {
-							tracker3D.getMazeStats(mazeNum).incrementNumAttempts();
 							gameState = GameState.MAZE3D;
 						}
 					} else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
@@ -631,7 +640,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		playMusic("./sounds/menu_music.wav");
 		startColor = 160;
 		colorIncrement = 25;
-		newHighScore = false;
+		newBestTime = false;
+		moveCount = 0;
 		duration = 0;
 		win = false;
 		for (int i = 0; i < maze.length; i++) {

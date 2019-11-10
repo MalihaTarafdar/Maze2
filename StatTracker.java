@@ -12,13 +12,13 @@ public class StatTracker {
 
 	public static class MazeStats {
 		private double bestTime; //in seconds
-		private int numAttempts;
+		private int leastMoves;
 		private int numWins;
 		private int numLosses;
 		
 		public MazeStats() {
 			bestTime = 0;
-			numAttempts = 0;
+			leastMoves = 0;
 			numWins = 0;
 			numLosses = 0;
 		}
@@ -30,11 +30,11 @@ public class StatTracker {
 			return bestTime;
 		}
 
-		public void incrementNumAttempts() {
-			numAttempts++;
+		public void setLeastMoves(int leastMoves) {
+			this.leastMoves = leastMoves;
 		}
-		public int getNumAttempts() {
-			return numAttempts;
+		public int getLeastMoves() {
+			return leastMoves;
 		}
 
 		public void incrementNumWins() {
