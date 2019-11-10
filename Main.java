@@ -20,7 +20,8 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private Menu mainMenu = new Menu("2D Maze", "3D Maze", "Stats", "Quit");
 	private Menu levelSelectMenu = new Menu("Level 1", "Level 2", "Level 3");
 	private Menu pauseMenu = new Menu("Resume", "Quit");
-	private StatTracker tracker = new StatTracker();
+	private StatTracker tracker2D = new StatTracker();
+	private StatTracker tracker3D = new StatTracker();
 	
 	private final Font title = new Font("Positive System", Font.PLAIN, 100);
 	private final Font main = new Font("Game Over", Font.PLAIN, 70);
@@ -43,8 +44,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private int colorIncrement = 25;
 	private int startColor = 160;
 	private boolean newHighScore = false;
-	
-	//TODO: Separate 2D and 3D maze stats
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
@@ -99,27 +98,37 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		while (true) {
 			switch (gameState) {
 				case MAZE2D:
+					if (isEnd(explorer.getLoc().getRow(), explorer.getLoc().getCol())) {
+						win = true;
+						tracker2D.getMazeStats(mazeNum).incrementNumWins();
+						gameState = GameState.GAME_OVER;
+						endTime = System.nanoTime();
+						duration += (endTime - startTime) / 1000000000.0;
+						if (duration < tracker2D.getMazeStats(mazeNum).getBestTime() || tracker2D.getMazeStats(mazeNum).getBestTime() == 0) {
+							tracker2D.getMazeStats(mazeNum).setBestTime(duration);
+							newHighScore = true;
+						}
+					}
+					break;
 				case MAZE3D:
 					if (explorer.getHealth() == 0) {
 						win = false;
-						tracker.getMazeStats(mazeNum).incrementNumLosses();
+						tracker3D.getMazeStats(mazeNum).incrementNumLosses();
 						gameState = GameState.GAME_OVER;
 					}
 					if (isEnd(explorer.getLoc().getRow(), explorer.getLoc().getCol())) {
 						win = true;
-						tracker.getMazeStats(mazeNum).incrementNumWins();
+						tracker3D.getMazeStats(mazeNum).incrementNumWins();
+						endTime = System.nanoTime();
+						duration += (endTime - startTime) / 1000000000.0;
+						if (duration < tracker3D.getMazeStats(mazeNum).getBestTime() || tracker3D.getMazeStats(mazeNum).getBestTime() == 0) {
+							tracker3D.getMazeStats(mazeNum).setBestTime(duration);
+							newHighScore = true;
+						}
 						gameState = GameState.GAME_OVER;
 					}
 					break;
 				case GAME_OVER:
-					endTime = System.nanoTime();
-					duration += (endTime - startTime) / 1000000000.0;
-					if (win) {
-						if (duration < tracker.getMazeStats(mazeNum).getBestTime() || tracker.getMazeStats(mazeNum).getBestTime() == 0) {
-							tracker.getMazeStats(mazeNum).setBestTime(duration);
-							newHighScore = true;
-						}
-					}
 					delay(1500);
 					gameState = GameState.MAIN_MENU;
 					reset();
@@ -412,21 +421,21 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		g2.drawString("Statistics", titleX, titleY);
 
 		g2.setFont(main);
-		for (int i = 1; i <= 3; i++) {
-			int x = frame.getWidth() / 6;
-			int y = frame.getHeight() / 6 + 220 * (i - 1);
+		for (int i = 1; i <= 6; i++) {
+			int x = (i <= 3) ? frame.getWidth() / 6 : frame.getWidth() / 6 + 400;
+			int y = (i <= 3) ? frame.getHeight() / 6 + 220 * (i - 1) : frame.getHeight() / 6 + 220 * (i - 4);
 			g2.setColor(Color.BLUE);
-			g2.drawString("Maze " + i, x, y);
+			g2.drawString((i <= 3) ? "2D Maze " + i : "3D Maze " + (i - 3), x, y);
 			
 			g2.setColor(Color.WHITE);
 			y += mm.getHeight();
-			g2.drawString("Best Time: " + Math.round(tracker.getMazeStats(i).getBestTime() * 1000) / 1000.0 + " seconds", x, y);
+			g2.drawString("Best Time: " + ((i <= 3) ? Math.round(tracker2D.getMazeStats(i).getBestTime() * 1000) / 1000.0 : Math.round(tracker3D.getMazeStats(i - 3).getBestTime() * 1000) / 1000.0) + " seconds", x, y);
 			y += mm.getHeight();
-			g2.drawString("Total Attempts: " + tracker.getMazeStats(i).getNumAttempts() + " attempts", x, y);
+			g2.drawString("Total Attempts: " + ((i <= 3) ? tracker2D.getMazeStats(i).getNumAttempts() : tracker3D.getMazeStats(i - 3).getNumAttempts()) + " attempts", x, y);
 			y += mm.getHeight();
-			g2.drawString("Total Wins: " + tracker.getMazeStats(i).getNumWins() + " wins", x, y);
+			g2.drawString("Total Wins: " + ((i <= 3) ? tracker2D.getMazeStats(i).getNumWins() : tracker3D.getMazeStats(i - 3).getNumWins()) + " wins", x, y);
 			y += mm.getHeight();
-			g2.drawString("Total Losses: " + tracker.getMazeStats(i).getNumLosses() + " losses", x, y);
+			g2.drawString("Total Losses: " + ((i <= 3) ? tracker2D.getMazeStats(i).getNumLosses() : tracker3D.getMazeStats(i - 3).getNumLosses()) + " losses", x, y);
 		}
 	}
 
@@ -585,13 +594,14 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 						playMusic("./sounds/maze_music.wav");
 
-						tracker.getMazeStats(mazeNum).incrementNumAttempts();
 						duration = 0;
 						startTime = System.nanoTime();
-
+						
 						if (onMaze2D) {
+							tracker2D.getMazeStats(mazeNum).incrementNumAttempts();
 							gameState = GameState.MAZE2D;
 						} else {
+							tracker3D.getMazeStats(mazeNum).incrementNumAttempts();
 							gameState = GameState.MAZE3D;
 						}
 					} else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
