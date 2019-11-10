@@ -6,10 +6,10 @@ public class Structure {
 	private final int size;
 	private Color color;
 	
-	public Structure(int row, int col, int size) {
+	public Structure(int row, int col, int size, Color color) {
 		loc = new Location(row, col);
 		this.size = size;
-		color = Color.GRAY;
+		this.color = color;
 	}
 	
 	public void setLoc(int row, int col) {

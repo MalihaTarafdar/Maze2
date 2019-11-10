@@ -44,13 +44,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	private int startColor = 160;
 	private boolean newHighScore = false;
 	
-	//TODO: maze maps
-	//TODO: Maze images (level select)
-	
-	//TODO: 2D Maze graphics
-	//TODO: Save stats
 	//TODO: Separate 2D and 3D maze stats
-	//TODO: On-screen timer
 
 	enum GameState {
 		MAIN_MENU, LEVEL_SELECT, STATS, MAZE2D, MAZE3D, GAME_OVER;
@@ -205,7 +199,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 	public void paintEsc(Graphics2D g2) {
 		g2.setFont(main);
-		g2.setPaint(new GradientPaint(40, 40, Color.BLUE, 72, 50, Color.CYAN));
+		g2.setPaint(new GradientPaint(30, 40, Color.BLUE, 102, 40, Color.CYAN));
 		g2.drawRect(30, 30, 72, 50);
 		g2.drawString("ESC", 40, 65);
 	}
@@ -251,7 +245,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 			}
 		}
 		if (startColor < 20) {
-			if (time % 1.0 == 0) {
+			if (time % 0.5 == 0) {
 				explorer.takeDamage(10); //explorer starts to take damage once maze is too dark
 			}
 		}
@@ -372,8 +366,9 @@ public class Main extends JPanel implements KeyListener, Runnable {
 	}
 
 	public void paintMaze2D(Graphics2D g2) {
-		for (Structure[] row : maze) {
-			for (Structure s : row) {
+		for (int i = 0; i < maze.length; i++) {
+			for (int j = 0; j < maze[0].length; j++) {
+				Structure s = maze[i][j];
 				if (s != null) {
 					g2.setColor(s.getColor());
 					g2.fillRect(s.getLoc().getCol() * s.getSize(), s.getLoc().getRow() * s.getSize(), s.getSize(), s.getSize());
@@ -382,7 +377,7 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		}
 		g2.setColor(explorer.getColor());
 		g2.fillOval(explorer.getLoc().getCol() * explorer.getSize(), explorer.getLoc().getRow() * explorer.getSize(), explorer.getSize(), explorer.getSize());
-		paintCompass(g2, 400);
+		paintCompass(g2, 500);
 	}
 
 	public void paintPauseMenu(Graphics2D g2) {
@@ -395,12 +390,13 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		g2.setFont(main);
 		g2.setColor(Color.WHITE);
 		int optionY = 180;
-		for (Menu.Option option : pauseMenu.getOptions()) {
-			g2.drawString(option.getName(), x + 70, optionY);
+		Menu.Option[] options = pauseMenu.getOptions();
+		for (int i = 0; i < options.length; i++) {
+			g2.drawString(options[i].getName(), x + 70, optionY);
 			optionY += 50;
 		}
-		for (int i = 0; i < pauseMenu.getOptions().length; i++) {
-			if (pauseMenu.getOptions()[i].isSelected()) {
+		for (int i = 0; i < options.length; i++) {
+			if (options[i].isSelected()) {
 				optionY = 165 + 50 * i;
 				g2.setColor(Color.BLUE);
 				g2.fillRect(x + 40, optionY, 10, 10);
@@ -452,19 +448,40 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		int titleX = frame.getWidth() / 2 - om.stringWidth("Select Level") / 2;
 		int titleY = frame.getHeight() / 4;
 		g2.setFont(other);
-		g2.setPaint(new GradientPaint(titleX, titleY, Color.BLUE, titleX + om.stringWidth("Select Level"), titleY + om.getHeight(), Color.CYAN));
+		g2.setPaint(new GradientPaint(titleX, titleY, Color.BLUE, titleX + om.stringWidth("Select Level"), titleY, Color.CYAN));
 		g2.drawString("Select Level", titleX, titleY);
 
-		g2.setColor(Color.WHITE);
-		g2.setFont(main);
 		int optionX = frame.getWidth() / 2 - 250;
-		for (Menu.Option option : levelSelectMenu.getOptions()) {
-			g2.drawString(option.getName(), optionX, frame.getHeight() * 2 / 3);
+		Menu.Option[] options = levelSelectMenu.getOptions();
+		for (int i = 0; i < options.length; i++) {
+			g2.setFont(main);
+			g2.setColor(Color.WHITE);
+			g2.drawString(options[i].getName(), optionX, frame.getHeight() * 2 / 3);
+
+			g2.setFont(title);
+			int x = optionX + tm.stringWidth("1") / 2, y = frame.getHeight() / 2 + 50;
+			Color c1, c2;
+			switch (i) {
+				case 0:
+					c1 = Color.GREEN;
+					c2 = new Color(0, 96, 0);
+					break;
+				case 2:
+					c1 = Color.ORANGE;
+					c2 = Color.RED;
+					break;
+				default:
+					c1 = Color.CYAN;
+					c2 = Color.BLUE;
+					break;
+			}
+			g2.setPaint(new GradientPaint(x + tm.stringWidth("1") / 2, y - tm.getHeight(), c1, x + tm.stringWidth("1") / 2, y, c2));
+			g2.drawString((i + 1) + "", x, y);
 			optionX += 200;
 		}
 		optionX = frame.getWidth() / 2 - 250 - om.stringWidth("Level 3") / 2;
-		for (int i = 0; i < levelSelectMenu.getOptions().length; i++) {
-			if (levelSelectMenu.getOptions()[i].isSelected()) {
+		for (int i = 0; i < options.length; i++) {
+			if (options[i].isSelected()) {
 				optionX += 200 * i;
 				g2.setColor(Color.BLUE);
 				g2.drawRect(optionX, frame.getHeight() / 2 - 50, 200, 200);
@@ -476,20 +493,19 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		int titleX = frame.getWidth() / 2 - tm.stringWidth("MAZE") / 2;
 		int titleY = frame.getHeight() / 4;
 		g2.setFont(title);
-		g2.setPaint(new GradientPaint(titleX, titleY, Color.BLUE, titleX + tm.stringWidth("MAZE"), titleY + tm.getHeight(), Color.CYAN));
+		g2.setPaint(new GradientPaint(titleX, titleY - tm.getHeight(), Color.BLUE, titleX + tm.stringWidth("MAZE"), titleY, Color.CYAN));
 		g2.drawString("MAZE", titleX, titleY);
 
 		g2.setColor(Color.WHITE);
 		g2.setFont(other);
 		int optionY = frame.getHeight() / 2;
-
-		for (Menu.Option option : mainMenu.getOptions()) {
-			g2.drawString(option.getName(), frame.getWidth() / 2 - mm.stringWidth(option.getName()) / 2, optionY);
+		Menu.Option[] options = mainMenu.getOptions();
+		for (int i = 0; i < options.length; i++) {
+			g2.drawString(options[i].getName(), frame.getWidth() / 2 - mm.stringWidth(options[i].getName()) / 2, optionY);
 			optionY += 55;
 		}
-
-		for (int i = 0; i < mainMenu.getOptions().length; i++) {
-			if (mainMenu.getOptions()[i].isSelected()) {
+		for (int i = 0; i < options.length; i++) {
+			if (options[i].isSelected()) {
 				optionY = frame.getHeight() / 2 + 57 * i - 20;
 				g2.setColor(Color.BLUE);
 				g2.fillRect(frame.getWidth() / 2 - 140, optionY, 10, 10);
