@@ -312,15 +312,15 @@ public class Main extends JPanel implements KeyListener, Runnable {
 
 			Color c;
 			if (isOutOfBounds(leftWallLoc.getRow(), leftWallLoc.getCol()) || maze[leftWallLoc.getRow()][leftWallLoc.getCol()] instanceof Structure) {
-				c = (isEnd(leftWallLoc.getRow(), leftWallLoc.getCol())) ? new Color(204, 204, 204) : color; //end is white
+				c = (isEnd(leftWallLoc.getRow(), leftWallLoc.getCol())) ? new Color(220, 220, 220) : color; //end is white
 				walls.add(new Wall3D(new Polygon(xpoints, ypoints, 4), c));
 			}
 			if (isOutOfBounds(rightWallLoc.getRow(), rightWallLoc.getCol()) || maze[rightWallLoc.getRow()][rightWallLoc.getCol()] instanceof Structure) {
-				c = (isEnd(rightWallLoc.getRow(), rightWallLoc.getCol())) ? new Color(204, 204, 204) : color; //end is white
+				c = (isEnd(rightWallLoc.getRow(), rightWallLoc.getCol())) ? new Color(220, 220, 220) : color; //end is white
 				walls.add(new Wall3D(reflectPolygon(new Polygon(xpoints, ypoints, 4), false), c));
 			}
 			if ((frontWall == null) && (isOutOfBounds(centerWallLoc.getRow(), centerWallLoc.getCol()) || maze[centerWallLoc.getRow()][centerWallLoc.getCol()] instanceof Structure)) {
-				c = (isEnd(centerWallLoc.getRow(), centerWallLoc.getCol())) ? new Color(204, 204, 204) : darkerColor; //end is white
+				c = (isEnd(centerWallLoc.getRow(), centerWallLoc.getCol())) ? new Color(220, 220, 220) : darkerColor; //end is white
 				frontWall = new Wall3D(convertRectToPoly(new Rectangle(xpoints[0], ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), c);
 				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] - (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //left
 				walls.add(0, new Wall3D(convertRectToPoly(new Rectangle(xpoints[0] + (frame.getWidth() - 2 * xpoints[0]), ypoints[0], frame.getWidth() - 2 * xpoints[0], frame.getHeight() - 2 * ypoints[0])), darkerColor)); //right
@@ -451,12 +451,11 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		g2.setFont(other);
 		if (win) {
 			g2.drawString("YOU WIN", frame.getWidth() / 2 - om.stringWidth("YOU WIN") / 2, frame.getHeight() / 2);
+			g2.setFont(main);
+			g2.drawString("Number of moves: " + moveCount, frame.getWidth() / 2 - mm.stringWidth("Number of moves: " + moveCount) / 2, frame.getHeight() / 2 + om.getHeight());
 		} else {
 			g2.drawString("YOU LOSE", frame.getWidth() / 2 - om.stringWidth("YOU LOSE") / 2, frame.getHeight() / 2);
 		}
-		
-		g2.setFont(main);
-		g2.drawString("Number of moves: " + moveCount, frame.getWidth() / 2 - mm.stringWidth("Number of moves: " + moveCount) / 2, frame.getHeight() / 2 + om.getHeight());
 
 		if (newBestTime) {
 			g2.drawString("New best time!", frame.getWidth() / 2 - mm.stringWidth("New best time!") / 2, frame.getHeight() / 2 + om.getHeight() * 2);
@@ -644,11 +643,6 @@ public class Main extends JPanel implements KeyListener, Runnable {
 		moveCount = 0;
 		duration = 0;
 		win = false;
-		for (int i = 0; i < maze.length; i++) {
-			for (int j = 0; j < maze[0].length; j++) {
-				maze[i][j] = null;
-			}
-		}
 	}
 
 	public void delay(int ms) {
