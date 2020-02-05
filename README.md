@@ -1,5 +1,4 @@
 # Maze2
----
 
 This maze game was created for a project in CS Topics: Data Structures and Game Design and is building off of my first maze game for my AP Computer Science A final.
 
