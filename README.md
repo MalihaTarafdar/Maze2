@@ -2,7 +2,7 @@
 
 This maze game was created for a project in CS Topics: Data Structures and Game Design and is building off of my first maze game for my AP Computer Science A final.
 
----
+Run `Main.java` to play.
 
 This game includes both 2D and 3D mazes. There are 3 different maps in total. Each map is progressively more difficult than the last.
 
