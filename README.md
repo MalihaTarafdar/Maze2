@@ -1,10 +1,10 @@
 # Maze2
 
-This maze game was created for a project in CS Topics: Data Structures and Game Design and is building off of my first maze game for my AP Computer Science A final.
-
-Run `Main.java` to play.
+This maze game was created for a project in CS Topics: Data Structures and Game Design and is building off of my first maze game for my AP Computer Science A final. Created using Java Swing.
 
 This game includes both 2D and 3D mazes. There are 3 different maps in total. Each map is progressively more difficult than the last.
+
+Run `Main.java` to play.
 
 ### 2D Maze
 The 2D maze is simple: just reach the end of the maze (marked with a white square). 
